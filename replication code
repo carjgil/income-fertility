@@ -1,0 +1,836 @@
+*****************************************************************************************************************
+* Institutions:	University of Florence (DiSIA) - IRPET
+* Project:    	Income, Gender and Fertility
+* Data:       	IRPEF-MEF (2003-2022) *Data cannot be shared for ethical/privacy reasons
+* Code:         Replication of ESR paper main and additional analyses
+* Authors:      Carlos J. Gil-Hernández, Daniele Vignoli, Raffaele Guetto, Maria Luisa Maitino, Letizia Ravagli
+* Contact:      carlos.gil@unifi.it
+* Last Update:  02/06/2026
+* Software:     STATA/MP 17
+*****************************************************************************************************************
+	
+	*Set working directory
+		cd "C:\Data"
+	
+	*Working Datasets
+		*Married: "married.dta"
+		*Single:  "single.dta"
+	
+	*MARRIED Dataset
+		use "married.dta", clear
+		
+	*Panel Set
+		xtset codice_id year
+		sort hid codice_id year
+	
+	*Output Log
+		log using "output-log.log", replace
+		
+********************************************************************************						
+* MAIN ANALYSES ****************************************************************
+********************************************************************************
+						
+********************************************************************************					
+	*Table 2. Summary statistics (person-years) by analytical samples and sex (2005-2022)		
+	
+		*MARRIED
+				bys sesso_id_des: sum anno_nasc_id age age_22 i.l_nasc_c i.edu ///
+					l2income_hh_income_y_real l2rel_total_income_hh ///
+					mother_age father_age child1_tv2 child1_timing partner_timing0  ///
+					h_partnership_age_men h_partnership_age_women	
+			
+		*SINGLE
+			use "single.dta", clear
+				
+				bys sesso_id_des: sum anno_nasc_id age age_22 i.l_nasc_c i.edu ///
+					l2income_hh_income_y_real ///
+					mother_age father_age child1_tv2 child_timing
+					
+********************************************************************************										
+	*Figure 1. Model 1A: Predicted probabilities of transition to 1st child over income deciles by married/unmarried and sex
+
+		*MARRIED
+			use "married.dta", clear
+			
+				*Women
+				logistic child1_tv2 b1.l2q10rincome0_as b1.l2q10rincome_partner0_as i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups partner_timing0 ///
+						 h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner if sesso_id_des==1
+													
+										estimate store women0
+										
+										margins, at(l2q10rincome0_as=(1 2 3 4 5 6 7 8 9 10)) post
+										
+										estimate store women_margins0
+
+										marginsplot, ylabel(0(.05).2)
+										graph save "NAIVE_LOGIT_WOMEN_LC_F0_1.gph", replace
+				 *Men
+				 logistic child1_tv2 b1.l2q10rincome0_as b1.l2q10rincome_partner0_as i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups partner_timing0 ///
+											h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner if sesso_id_des==2 
+													
+										estimate store men0
+										
+										margins, at(l2q10rincome0_as=(1 2 3 4 5 6 7 8 9 10)) post
+										
+										estimate store men_margins0
+
+										marginsplot, ylabel(0(.05).2)
+										graph save "NAIVE_LOGIT_MEN_LC_F0_1.gph", replace
+										
+										graph combine "NAIVE_LOGIT_MEN_LC_F0.gph" "NAIVE_LOGIT_WOMEN_LC_F0_1.gph"
+											graph save "NAIVE_LOGIT_MEN_WOMEN_LC_F0_1.gph", replace
+											graph export "NAIVE_LOGIT_MEN_WOMEN_LC_F0_1.png", replace
+													
+										coefplot men_margins0 (women_margins0), ///
+											keep(*._at) omitted baselevels ///
+											recast(scatter) ///
+											ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+											ylabel(0(.05).2) ///
+											xlabel(1 "1" 2 "2" 3 "3" 4 "4" 5 "5" 6 "6" 7 "7" 8 "8" 9 "9" 10 "10") ///
+											xtitle("Year-specific Gross Personal Annual Income Deciles (lagged t-2)") ///
+											title("Married Couples") ///
+											legend(order(2 "Men" 4 "Women") position(6) col(2) region(lcolor(black))) vertical
+													graph save "NAIVE_LOGIT_MEN_WOMEN_LC_F_COEFPLOT0_1.gph", replace
+													graph export "NAIVE_LOGIT_MEN_WOMEN_LC_F_COEFPLOT0_1.png", replace			
+			
+		*SINGLE
+			use "single.dta", clear
+			
+			   *Women
+				logistic child1_tv2 b1.l2q10rincome0_as i.year_groups i.l_nasc_c age_women age2_women i.l2modello_ if sesso_id_des==1
+								
+										estimate store women0
+										
+										margins, at(l2q10rincome0_as=(1/10)) post coefleg
+										
+										estimate store women_margins0
+
+										marginsplot, ylabel(.0(.01).05)
+										graph save "NAIVE_LOGIT_WOMEN_Q0_SINGLE.gph", replace
+
+				*Men
+				logistic child1_tv2 b1.l2q10rincome0_as i.year_groups i.l_nasc_c age_men age2_men i.l2modello_ if sesso_id_des==2
+								
+										estimate store men0
+										
+										margins, at(l2q10rincome0_as=(1/10)) post coefleg
+										
+										estimate store men_margins0
+
+										marginsplot, ylabel(.0(.01).05)
+										graph save "NAIVE_LOGIT_MEN_Q0_SINGLE.gph", replace
+										
+										graph combine "NAIVE_LOGIT_MEN_Q0_SINGLE.gph" "NAIVE_LOGIT_WOMEN_Q0_SINGLE.gph"
+										graph save "NAIVE_LOGIT_MEN_WOMEN_Q0_SINGLE.gph", replace
+										graph export "NAIVE_LOGIT_MEN_WOMEN_Q0_SINGLE.png", replace
+																			
+										coefplot men_margins0 (women_margins0), ///
+											keep(*._at) omitted baselevels ///
+											ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+											ylabel(0(.01).05) ///					
+											xlabel(1 "1" 2 "2" 3 "3" 4 "4" 5 "5" 6 "6" 7 "7" 8 "8" 9 "9" 10 "10") ///
+											xtitle("Year-specific Annual Gross Personal Income Deciles (t-2)") ///
+											ytitle("Probability of Transition into 1st Child") ///
+											title("Single/Cohabitors") ///
+											legend(order(2 "Men" 4 "Women") position(6) col(2) region(lcolor(black))) vertical
+										graph save "NAIVE_LOGIT_MEN_WOMEN_SINGLE_Q0_5_COEFPLOT.gph", replace
+										graph export "NAIVE_LOGIT_MEN_WOMEN_SINGLE_Q0_5_COEFPLOT.png", replace
+										
+										graph combine "NAIVE_LOGIT_MEN_Q0_SINGLE.gph" "NAIVE_LOGIT_WOMEN_Q0_SINGLE.gph"		
+					
+********************************************************************************					
+	*Figure 2. Model 2A: AMEs of individual medium and top income tertiles (vs 0=bottom 1st tertile) on the transition to first child by sex and over year periods among married couples and single/cohabitors
+		
+		*MARRIED
+			use "married.dta", clear
+
+				*Women
+				logistic child1_tv2 b1.l2q3rincome0_as##b1.year_group3 b1.l2q3rincome_partner0_as##b1.year_group3 i.h_l_nasc_c_head i.h_l_nasc_c_partner partner_timing0 ///
+					h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner if sesso_id_des==1
+					
+					margins i.l2q3rincome0_as, at(year_group3=(0 1 2 3))
+						marginsplot, ///
+								recast(scatter) ///
+								ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+								ytitle("") ///						
+								ylabel(.05(.05).2) ///
+								xtitle("") ///
+								xlabel(, angle(45)) ///
+								title("Women") ///
+								plotopts(msize(large)) ///				
+								legend(order(4 "Low Income (T1)" 5 "Medium Income (T2)" 6 "High Income (T3)") title("Income Tertile", size(small)) position(6) col(3) region(lcolor(black)))
+									graph save "NAIVE_LOGIT_WOMEN_INT_YEAR_PR_Q3.gph", replace
+									graph export "NAIVE_LOGIT_WOMEN_INT_YEAR_PR_Q3.png", replace
+
+						margins, dydx(2.l2q3rincome0_as 3.l2q3rincome0_as) at(year_group3=(1 2 3)) post coefleg			
+								marginsplot, ///
+									recast(scatter) ///
+									ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+									ytitle("") ///
+									yscale(range(0 .07)) ///
+									ylabel(0(.02).07) ///
+									xtitle("") ///
+									xlabel(, angle(45)) ///
+									yline(0, lcolor(reddish) lpattern(dash)) ///
+									title("Women") ///
+									plotopts(msize(large)) ///
+									legend(order(3 "Tertile 2 vs. 1" 4 "Tertile 3 vs. 1") ///
+										position(6) col(2) region(lcolor(black)))					
+									graph save "NAIVE_LOGIT_WOMEN_INT_YEAR_AME_Q3.gph", replace
+									graph export "NAIVE_LOGIT_WOMEN_INT_YEAR_AME_Q3.png", replace
+										
+				*Men
+				logistic child1_tv2 b1.l2q3rincome0_as##b1.year_group3 b1.l2q3rincome_partner0_as##b1.year_group3 i.h_l_nasc_c_head i.h_l_nasc_c_partner partner_timing0 ///
+					h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner if sesso_id_des==2
+					
+					margins i.l2q3rincome0_as, at(year_group3=(0 1 2 3))
+						marginsplot, ///
+								recast(scatter) ///
+								ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+								ytitle("") ///						
+								ylabel(.05(.05).2) ///
+								xtitle("") ///
+								xlabel(, angle(45)) ///
+								title("Men") ///
+								plotopts(msize(large)) ///				
+								legend(order(4 "Low Income (T1)" 5 "Medium Income (T2)" 6 "High Income (T3)") title("Income Tertile", size(small)) position(6) col(3) region(lcolor(black)))
+									graph save "NAIVE_LOGIT_MEN_INT_YEAR_PR_Q3.gph", replace
+									graph export "NAIVE_LOGIT_MEN_INT_YEAR_PR_Q3.png", replace
+						
+						margins, dydx(2.l2q3rincome0_as 3.l2q3rincome0_as) at(year_group3=(1 2 3)) post coefleg			
+								marginsplot, ///
+									recast(scatter) ///
+									ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+									ytitle("") ///
+									yscale(range(0 .07)) ///
+									ylabel(0(.02).07) ///
+									xtitle("") ///
+									xlabel(, angle(45)) ///
+									yline(0, lcolor(reddish) lpattern(dash)) ///
+									title("Men") ///
+									plotopts(msize(large)) ///
+									legend(order(3 "Tertile 2 vs. 1" 4 "Tertile 3 vs. 1") ///
+										position(6) col(2) region(lcolor(black)))					
+									graph save "NAIVE_LOGIT_MEN_INT_YEAR_AME_Q3.gph", replace
+									graph export "NAIVE_LOGIT_MEN_INT_YEAR_AME_Q3.png", replace
+
+									grc1leg "NAIVE_LOGIT_MEN_INT_YEAR_AME_Q3.gph" "NAIVE_LOGIT_WOMEN_INT_YEAR_AME_Q3.gph", title("Married Couples", size(medium))
+										graph save "NAIVE_LOGIT_MEN_WOMEN_INT_YEAR_AME_Q3.gph", replace
+										graph export "NAIVE_LOGIT_MEN_WOMEN_INT_YEAR_AME_Q3.png", replace
+									
+									grc1leg "NAIVE_LOGIT_MEN_INT_YEAR_PR_Q3.gph" "NAIVE_LOGIT_WOMEN_INT_YEAR_PR_Q3.gph", title("Married Couples", size(medium))
+										graph save "NAIVE_LOGIT_MEN_WOMEN_INT_YEAR_PR_Q3.gph", replace
+										graph export "NAIVE_LOGIT_MEN_WOMEN_INT_YEAR_PR_Q3.png", replace
+		
+		*SINGLE
+			use "single.dta", clear
+			
+				*Women
+				logistic child1_tv2 b1.l2q3rincome0_as##b1.year_group3 i.l_nasc_c age_women age2_women i.l2modello_ if sesso_id_des==1
+									
+					margins i.l2q3rincome0_as, at(year_group3=(0 1 2 3)) 
+							estimate store women_year_single_margins0
+			
+						margins, dydx(2.l2q3rincome0_as 3.l2q3rincome0_as) at(year_group3=(1 2 3)) post coefleg			
+						estimate store women_year_single_margins0
+							marginsplot, ///
+								recast(scatter) ///
+								ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+								ytitle("") ///
+								ylabel(0(.02).07) ///
+								xtitle("") ///
+								xlabel(, angle(45)) ///
+								yline(0, lcolor(reddish) lpattern(dash)) ///
+								title("Women") ///
+								plotopts(msize(large)) ///
+								legend(order(3 "Tertile 2 vs. 1" 4 "Tertile 3 vs. 1") ///
+									position(6) col(2) region(lcolor(black)))					
+						graph save "NAIVE_LOGIT_WOMEN_INT_YEAR_Q3_SINGLE.gph", replace
+						graph export "NAIVE_LOGIT_WOMEN_INT_YEAR_Q3_SINGLE.png", replace
+
+				*Men
+				logistic child1_tv2 b1.l2q3rincome0_as##b1.year_group3 i.l_nasc_c age_men age2_men i.l2modello_ if sesso_id_des==2
+									
+					margins i.l2q3rincome0_as, at(year_group3=(0 1 2 3)) 
+							estimate store men_year_single_margins0
+					
+						margins, dydx(2.l2q3rincome0_as 3.l2q3rincome0_as) at(year_group3=(1 2 3)) post coefleg			
+						estimate store men_year_single_margins0
+							marginsplot, ///
+								recast(scatter) ///
+								ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+								ytitle("") ///
+								ylabel(0(.02).07) ///
+								xtitle("") ///
+								xlabel(, angle(45)) ///
+								yline(0, lcolor(reddish) lpattern(dash)) ///
+								title("Men") ///
+								plotopts(msize(large)) ///
+								legend(order(3 "Tertile 2 vs. 1" 4 "Tertile 3 vs. 1") ///
+									position(6) col(2) region(lcolor(black)))					
+						graph save "NAIVE_LOGIT_MEN_INT_YEAR_Q3_SINGLE.gph", replace
+						graph export "NAIVE_LOGIT_MEN_INT_YEAR_Q3_SINGLE.png", replace
+
+					grc1leg "NAIVE_LOGIT_MEN_INT_YEAR_Q3_SINGLE.gph" "NAIVE_LOGIT_WOMEN_INT_YEAR_Q3_SINGLE.gph", title("Single", size(medium))
+						graph save "NAIVE_LOGIT_MEN_WOMEN_INT_YEAR_Q3_SINGLE.gph", replace
+						graph export "NAIVE_LOGIT_MEN_WOMEN_INT_YEAR_Q3_SINGLE.png", replace	
+						
+********************************************************************************						
+	*Figure 3. Model 3A: Predicted probabilities of transition to first child by couple's income assortative mating
+					
+		*MARRIED
+			use "married.dta", clear
+
+			*Women
+			logistic child1_tv2 b1.homoga0_eg i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups partner_timing0 ///
+					 h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner if sesso_id_des==1 
+						
+						margins, at(homoga0_eg=(1 2 3 4 5)) post coefleg
+							marginsplot,	///
+								recast(scatter) ///
+								ciopts(recast(rarea) fcolor(blue%20) fintensity(20) lwidth(none)) ///			
+								ylabel(.05(.05).2) ///
+								xlabel(, angle(45)) ///
+								xtitle("") ///
+								ytitle("Probability of Transition to 1st Child") ///
+								title("")
+									graph save "HOMOGAMY_0_Q3.gph", replace
+									graph export "HOMOGAMY_0_Q3.png", replace
+							
+								lincom _b[2.homoga0_eg] - _b[3.homoga0_eg]
+								lincom _b[2.homoga0_eg] - _b[5.homoga0_eg]
+								
+********************************************************************************						
+	*TABLE 4 - Model 3B: Predicted probabilities of 1st child transition by the interaction between the wife's and husband's income tertiles in married couples (women's model: n = 680,077)
+	
+			*Women
+			logistic child1_tv2 i.homogamy0 i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups partner_timing0 ///
+										h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner if sesso_id_des==1 
+				margins i.homogamy0
+
+			logistic child1_tv2 i.homogamy i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups partner_timing0 ///
+										h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner if sesso_id_des==1 
+				margins i.homogamy
+											
+********************************************************************************						
+* APPENDIX *********************************************************************
+********************************************************************************						
+	
+********************************************************************************	
+			*Table A.2. Summary statistics (mean) and sample size (2005-2022)
+			
+				*MARRIED
+						bys sesso_id_des: sum year i.l2modello_ anno_nasc_id age age_22 mother_age father_age year_h_child1_data_nasc_figlio1 child1_treat child1_tv2 couple_first_year pid_pyr_max
+				
+				*SINGLE
+					use "single.dta", clear
+								
+						bys sesso_id_des: sum year i.l2modello_ anno_nasc_id age age_22 mother_age father_age year_h_child1_data_nasc_figlio1 child1_treat child1_tv2 pid_pyr_max
+						
+********************************************************************************			
+			*Table A.3. Couple's income (year-specific tertiles) assortative mating distribution (column %) by period
+					
+				*MARRIED
+					use "married.dta", clear
+						
+						tab homoga0_eg year_group3 if homoga0_eg>0 & sesso_id_des==1 & year_group3>0, col nofreq
+						
+********************************************************************************						
+			*Figure A.1-A. Model 1B-A: Linear probability fixed-effects (LPM-FE) model of transition to 1st child over income deciles by married/unmarried and sex
+			
+				*MARRIED
+				
+					*Women
+					xtreg child1_tv2 b5.l2q10rincome0_as b5.l2q10rincome_partner0_as i.year_groups partner_timing0 i.h_age_woman ///
+							i.l2modello_ i.l2modello_partner if sesso_id_des==1 & pid_pyr_max>1, fe vce(cl codice_id)
+					estimate store women_fe_b5
+					
+					*Men
+					xtreg child1_tv2 b5.l2q10rincome0_as b5.l2q10rincome_partner0_as i.year_groups partner_timing0 i.h_age_woman ///
+							i.l2modello_ i.l2modello_partner if sesso_id_des==2 & pid_pyr_max>1, fe vce(cl codice_id)
+					estimate store men_fe_b5
+					
+						coefplot men_fe_b5 (women_fe_b5), ///
+							keep(*.l2q10rincome0_as) ///
+							drop(0.l2q10rincome0_as) ///							
+							omitted baselevels ///
+							recast(scatter) ///
+							ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///				
+							yline(0, lcolor(reddish) lpattern(dash)) ///
+							ylabel(-.05(.01).05) ///
+							xlabel(1 "1" 2 "2" 3 "3" 4 "4" 5 "5" 6 "6" 7 "7" 8 "8" 9 "9" 10 "10") ///
+							xtitle("Year-specific Annual Gross Personal Income Decile (t-2)") ///
+							title("Married Couples") ///
+							legend(order(2 "Men" 4 "Women") position(6) col(2) region(lcolor(black))) vertical
+								graph save "LPM-FE_MEN_WOMEN_COEFPLOT.gph", replace
+								graph export "LPM-FE_MEN_WOMEN_COEFPLOT.png", replace
+								
+				*SINGLE
+					use "single.dta", clear
+				
+					*Women
+					xtreg child1_tv2 b5.l2q10rincome0_as i.year_groups i.age_women i.l2modello_ if sesso_id_des==1 & pid_pyr_max>1, fe vce(cl codice_id)
+						estimate store women_fe_b5
+					
+					*Men
+					xtreg child1_tv2 b5.l2q10rincome0_as i.year_groups i.age_men i.l2modello_ if sesso_id_des==2 & pid_pyr_max>1, fe vce (cl codice_id) 
+						estimate store men_fe_b5
+					
+						coefplot men_fe_b5 (women_fe_b5), ///
+							keep(*.l2q10rincome0_as) ///
+							drop(0.l2q10rincome0_as) ///							
+							omitted baselevels ///
+							recast(scatter) ///
+							ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+							yline(0, lcolor(reddish) lpattern(dash)) ///
+							ylabel(-.05(.01).05) ///
+							xlabel(1 "1" 2 "2" 3 "3" 4 "4" 5 "5" 6 "6" 7 "7" 8 "8" 9 "9" 10 "10") ///
+							xtitle("Year-specific Annual Gross Personal Income Decile (t-2)") ///
+							title("Single/Cohabitors") ///
+							legend(order(2 "Men" 4 "Women") position(6) col(2) region(lcolor(black))) vertical
+								graph save "LPM-FE_MEN_WOMEN_SINGLE_B5_COEFPLOT.gph", replace
+								graph export "LPM-FE_MEN_WOMEN_SINGLE_B5_COEFPLOT.png", replace
+								
+********************************************************************************							
+			*Figure A.1-B. Between model of ever transition to 1st child over deciles of mean real income over the period (time-constant) by married/unmarried and sex
+					
+				*MARRIED
+					use "married.dta", clear
+
+						*Women
+						logistic child1_treat b1.l2q10rincome0_as_mean b1.l2q10rincome_partner0_as_mean i.h_l_nasc_c_head i.h_l_nasc_c_partner ///
+									i.h_partnership_age_men i.h_partnership_age_women i.max_partner_timing0 if sesso_id_des==1 & first_couple_obs_f==1
+												
+									estimate store women0
+									
+									margins, at(l2q10rincome0_as_mean=(1 2 3 4 5 6 7 8 9 10)) post
+									
+									estimate store women_margins0_tc
+
+						*Men
+						logistic child1_treat b1.l2q10rincome0_as_mean b1.l2q10rincome_partner0_as_mean i.h_l_nasc_c_head i.h_l_nasc_c_partner ///
+									i.h_partnership_age_men i.h_partnership_age_women i.max_partner_timing0 if sesso_id_des==2 & first_couple_obs_m==1 
+												
+									estimate store men0
+									
+									margins, at(l2q10rincome0_as_mean=(1 2 3 4 5 6 7 8 9 10)) post
+									
+									estimate store men_margins0_tc
+												
+								coefplot ///
+									(men_margins0_tc, ///
+										lcolor(navy) ///
+										mcolor(navy) ///
+										msize(medium) ///
+										ciopts(recast(rarea) fcolor(navy%20) lwidth(none))) ///
+									(women_margins0_tc, ///
+										lcolor(reddish) ///
+										mcolor(reddish) ///
+										msize(medium) ///
+										ciopts(recast(rarea) fcolor(reddish%20) lwidth(none))), ///										
+										keep(*._at) omitted baselevels ///
+										ylabel(0(.1).7, grid) ///
+										xlabel(1 "1" 2 "2" 3 "3" 4 "4" 5 "5" 6 "6" 7 "7" 8 "8" 9 "9" 10 "10", grid) ///
+										xtitle("Mean Year-specific Annual Gross Personal Income Deciles (t-2)") ///
+										title("Married Couples") ///
+										legend(order(2 "Men" 4 "Women") position(6) col(2) region(lcolor(black))) vertical
+												graph save "C:\Users\Carlos J. Gil\Dropbox\IRPET\Dati\2022\output\IF\TIME-CONSTANT_MARRIED.gph", replace
+												graph export "C:\Users\Carlos J. Gil\Dropbox\IRPET\Dati\2022\output\IF\TIME-CONSTANT_MARRIED.png", replace						
+					
+				*SINGLE
+					use "single.dta", clear
+				
+						*Women
+						logistic child1_treat b1.l2q10rincome0_as_mean i.l_nasc_c i.max_age i.min_age if sesso_id_des==1 & first_obs==1
+										
+							estimate store women
+							
+							margins, at(l2q10rincome0_as_mean=(1/10)) post coefleg
+							
+							estimate store women_margins0_tc
+
+							*marginsplot, ylabel(0(.05).5)
+							*graph save "NAIVE_LOGIT_WOMEN_SINGLE_TC.gph", replace
+
+						*Men
+						logistic child1_treat b1.l2q10rincome0_as_mean i.l_nasc_c i.max_age i.min_age if sesso_id_des==2 & first_obs==1
+										
+							estimate store men
+							
+							margins, at(l2q10rincome0_as_mean=(1/10)) post coefleg
+							
+							estimate store men_margins0_tc
+
+							*marginsplot, ylabel(0(.05).5)
+							*graph save "NAIVE_LOGIT_MEN_SINGLE_TC.gph", replace
+							
+								*graph combine "NAIVE_LOGIT_MEN_SINGLE_TC.gph" "NAIVE_LOGIT_WOMEN_SINGLE_TC.gph"
+									*graph save "NAIVE_LOGIT_MEN_WOMEN_SINGLE_TC.gph", replace
+									*graph export "NAIVE_LOGIT_MEN_WOMEN_SINGLE_TC.png", replace
+								
+							coefplot ///
+								(men_margins0_tc, ///
+									lcolor(navy) ///
+									mcolor(navy) ///
+									msize(medium) ///
+									ciopts(recast(rarea) fcolor(navy%20) lwidth(none))) ///
+								(women_margins0_tc, ///
+									lcolor(reddish) ///
+									mcolor(reddish) ///
+									msize(medium) ///
+									ciopts(recast(rarea) fcolor(reddish%20) lwidth(none))), ///						
+									keep(*._at) omitted baselevels ///
+									ylabel(0(.05).7, grid) ///					
+									xlabel(1 "1" 2 "2" 3 "3" 4 "4" 5 "5" 6 "6" 7 "7" 8 "8" 9 "9" 10 "10", grid) ///
+									xtitle("Mean Year-specific Annual Gross Personal Income Deciles (t-2)") ///
+									title("Single/Cohabitors") ///
+									legend(order(2 "Men" 4 "Women") position(6) col(2) region(lcolor(black))) vertical
+							graph save "NAIVE_LOGIT_MEN_WOMEN_SINGLE_COEFPLOT_TC.gph", replace
+							graph export "NAIVE_LOGIT_MEN_WOMEN_SINGLE_COEFPLOT_TC.png", replace						
+			
+********************************************************************************						
+			*Figure A.2. Model 3C: Predicted probabilities of 1st child transition by married couples' income assortative mating: year-specific income deciles wife-husband interaction
+				
+				*MARRIED
+					use "married.dta", clear
+			
+					*Women
+					logistic child1_tv2 i.q10_0 i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups partner_timing0 ///
+						h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner if sesso_id_des==1 
+						
+						margins i.q10_0
+						
+********************************************************************************						
+			*Figure A.3.-A. Predicted probabilities of transition to 1st child by married couple's income and educational attainment
+		
+				*Women
+				logistic child1_tv2 b1.l2q10rincome0_edu_as b1.l2q10rincome_partner0_edu_as i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups partner_timing0 ///
+						h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner i.h_edu3_head i.h_edu3_partner if sesso_id_des==1
+								
+					estimate store women0
+					
+					margins, at(l2q10rincome0_edu_as=(1 2 3 4 5 6 7 8 9 10)) post
+					
+					estimate store women_margins0
+				
+				*Women
+				logistic child1_tv2 b1.l2q10rincome0_edu_as b1.l2q10rincome_partner0_edu_as i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups partner_timing0 ///
+						h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner i.h_edu3_head i.h_edu3_partner if sesso_id_des==1
+					
+					margins i.h_edu3_head, post
+					
+					estimate store women_margins0_edu
+
+					marginsplot, ylabel(0(.05).2)
+					graph save "NAIVE_LOGIT_WOMEN_LC_EDU.gph", replace
+
+				*Men
+				logistic child1_tv2 b1.l2q10rincome0_edu_as b1.l2q10rincome_partner0_edu_as i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups partner_timing0 ///
+						h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner i.h_edu3_head i.h_edu3_partner if sesso_id_des==2 
+								
+					estimate store men0
+					
+					margins, at(l2q10rincome0_edu_as=(1 2 3 4 5 6 7 8 9 10)) post
+					
+					estimate store men_margins0
+				
+				*Men
+				logistic child1_tv2 b1.l2q10rincome0_edu_as b1.l2q10rincome_partner0_edu_as i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups partner_timing0 ///
+						h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner i.h_edu3_head i.h_edu3_partner if sesso_id_des==2 
+					
+					margins i.h_edu3_head, post
+					
+					estimate store men_margins0_edu
+
+					marginsplot, ylabel(0(.05).2)
+					graph save "NAIVE_LOGIT_MEN_LC_EDU.gph", replace
+					
+					graph combine "NAIVE_LOGIT_MEN_LC_EDU.gph" "NAIVE_LOGIT_WOMEN_LC_EDU.gph"
+						graph save "NAIVE_LOGIT_MEN_WOMEN_LC_EDU.gph", replace
+						graph export "NAIVE_LOGIT_MEN_WOMEN_LC_EDU.png", replace
+								
+					coefplot men_margins0 (women_margins0), ///
+						keep(*._at) omitted baselevels ///
+						recast(scatter) ///
+						ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+						ylabel(.05(.05).2) ///
+						xlabel(1 "1" 2 "2" 3 "3" 4 "4" 5 "5" 6 "6" 7 "7" 8 "8" 9 "9" 10 "10") ///
+						xtitle("Year-specific Gross Personal Annual Income Deciles (lagged t-2)") ///
+						title("Probability of Transition into 1st Child") ///
+						legend(order(2 "Men" 4 "Women") position(6) col(2) region(lcolor(black))) vertical
+								graph save "NAIVE_LOGIT_MEN_WOMEN_LC_INC_EDU_COEFPLOT0.gph", replace
+								graph export "NAIVE_LOGIT_MEN_WOMEN_LC_EDU_COEFPLOT0.png", replace
+					
+					coefplot men_margins0_edu (women_margins0_edu), ///
+						keep(*h_edu3_head) omitted baselevels ///
+						recast(scatter) ///
+						ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+						ylabel(.05(.05).2) ///
+						xlabel(1 "≤Lower-Sec." 2 "Upper-Sec." 3 "≥College") ///
+						xtitle("Educational Attainment") ///
+						title("Probability of Transition into 1st Child") ///
+						legend(order(2 "Men" 4 "Women") position(6) col(2) region(lcolor(black))) vertical
+								graph save "NAIVE_LOGIT_MEN_WOMEN_LC_EDU_COEFPLOT0.gph", replace
+								graph export "NAIVE_LOGIT_MEN_WOMEN_LC_EDU_COEFPLOT0.png", replace
+					
+						grc1leg "NAIVE_LOGIT_MEN_WOMEN_LC_EDU_COEFPLOT0.gph" "NAIVE_LOGIT_MEN_WOMEN_LC_INC_EDU_COEFPLOT0.gph"
+							graph save "NAIVE_LOGIT_MEN_WOMEN_LC_INC_EDU_COEFPLOT0_C.gph", replace
+							graph export "NAIVE_LOGIT_MEN_WOMEN_LC_INC_EDU_COEFPLOT0_C.png", replace
+							
+********************************************************************************								
+			*Figure A.3-B. Models M3D-M3E: Predicted probabilities of transition to 1st child by married couple's income (M3D) and educational (M3E) assortative mating
+			
+					*Women
+					logistic child1_tv2 i.homoga_edu i.homoga partner_timing0 i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups ///
+								h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner if sesso_id_des==1 
+								
+								margins i.homoga_edu
+									marginsplot, title("Educational Homogamy") ///
+										recast(scatter) ///
+										ciopts(recast(rarea) fcolor(blue%20) fintensity(20) lwidth(none)) ///			
+										ylabel(.05(.05).2) ///
+										xlabel(, angle(45)) ///
+										xtitle("") ///
+										ytitle("Probability of Transition to 1st Child")
+
+									graph save "EDU_HOMOGAMY.gph", replace
+									graph export "EDU_HOMOGAMY.png", replace
+									
+										lincom _b[2.homoga_edu] - _b[3.homoga_edu]
+										lincom _b[2.homoga_edu] - _b[5.homoga_edu]
+
+								margins i.homoga
+									marginsplot, title("Income Homogamy") ///						
+										recast(scatter) ///
+										ciopts(recast(rarea) fcolor(blue%20) fintensity(20) lwidth(none)) ///			
+										ylabel(.05(.05).2) ///
+										xlabel(, angle(45)) ///
+										xtitle("") ///
+										ytitle("Probability of Transition to 1st Child")
+
+										graph save "INCOME_HOMOGAMY.gph", replace
+										graph export "INCOME HOMOGAMY.png", replace
+						
+										graph combine "EDU_HOMOGAMY.gph" "INCOME_HOMOGAMY.gph", ycommon col(2)
+											graph save "INCOME-EDU_HOMOGAMY.gph", replace
+											graph export "INCOME-EDU_HOMOGAMY.png", replace
+											
+********************************************************************************									
+			*Figure A.4. Model 2B: Predicted probabilities of transition to 1st child by married couple's income assortative mating (year-specific tertiles) and 3-period interaction 
+			*Q3-Homogamy (0)
+			
+					*Women
+					logistic child1_tv2 b1.homoga0_eg##b1.year_group3 i.h_l_nasc_c_head i.h_l_nasc_c_partner partner_timing0 ///
+						h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner if sesso_id_des==1 & homoga0_eg>0
+						
+						margins i.homoga0_eg, at(year_group3=(1 2 3)) post coefleg
+						marginsplot, ///
+								recast(scatter) ///
+								ci1opts(recast(rarea) fcolor(%40) fintensity(20) lwidth(none)) ///
+								ci2opts(recast(rarea) fcolor(%40) fintensity(20) lwidth(none)) ///
+								ci3opts(recast(rarea) fcolor(%40) fintensity(20) lwidth(none)) ///
+								ci4opts(recast(rarea) fcolor(%40) fintensity(20) lwidth(none)) ///
+								ci5opts(recast(rarea) fcolor(%40) fintensity(20) lwidth(none)) ///
+								ytitle("") ///						
+								ylabel(.05(.05).20) ///
+								xtitle("") ///
+								xlabel(, angle(45)) ///
+								title("") ///
+								plotopts(msize(large)) ///						
+								legend(position(6) col(5) region(lcolor(black))) ///
+								plot1opts(msymbol(square) msize(large) mc()) ///
+								plot2opts(msymbol(triangle)  msize(large) mc()) ///
+								plot3opts(msymbol(diamond)   msize(large) mc()) ///
+								plot4opts(msymbol(circle)        msize(large) mc()) ///
+								plot5opts(msymbol(x)   msize(large) mc()) 
+							graph save "NAIVE_LOGIT_HOMOGAMY_0_INT_YEAR_Q3.gph", replace
+							graph export "NAIVE_LOGIT_HOMOGAMY_0_INT_YEAR_Q3.png", replace
+							
+********************************************************************************								
+			*Figure A.5. Histogram of the women's share of the couple's total household annual income
+			
+					histogram l2rel_total_income_hh if sesso_id_des==1 & modello_!=0 & modello_partner!=0, percent 
+					
+********************************************************************************										
+		    *Figure A.6. Model 3F: Predicted probabilities of transition to 1st child over women's share of married couple's total household annual income		
+								
+					*Women
+					logistic child1_tv2 b1.l2q10total_income_hh_as b1.l2rel_total_inc_groups i.h_l_nasc_c_head i.h_l_nasc_c_partner i.year_groups partner_timing0 ///
+												h_partnership_age_men h_partnership_age_women i.l2modello_ i.l2modello_partner if sesso_id_des==1 & l2rel_total_inc_groups>0	
+											
+						margins i.l2rel_total_inc_groups
+									marginsplot, ///
+											recast(scatter) ///
+											ciopts(recast(rarea) fcolor(blue%20) fintensity(20) lwidth(none)) ///
+											ytitle("Probability of Transition to 1st Child") ///		
+											title("") ///
+											ylabel(.05(.05).2) ///
+											xtitle ("Women's Share of Couple's Total Household Annual Income") ///
+											plotopts(msize(large)) 					
+										graph save "REL_INC.gph", replace
+										graph export "REL_INC.png", replace
+										
+********************************************************************************																	
+			*Figure A.7. Model 3G: Predicted probabilities of transition to 1st child over year-specific total household income deciles (wife + husband income)			
+
+						margins, at(l2q10total_income_hh_as=(1/10)) post
+							estimate store total_margins
+								
+							coefplot total_margins, ///
+								keep(*._at) ///
+								omitted baselevels ///
+								recast(scatter) ///
+								ciopts(recast(rarea) fcolor(blue%20) fintensity(20) lwidth(none)) ///
+								ylabel(.05(.05).2) ///
+								xlabel(1 "1" 2 "2" 3 "3" 4 "4" 5 "5" 6 "6" 7 "7" 8 "8" 9 "9" 10 "10") ///
+								xtitle("Year-specific Annual Gross Total Household Income Decile (t-2)") ///
+								ytitle("Probability of Transition into 1st Child") vertical
+											graph save "TOTAL_REL_INC.gph", replace
+											graph export "TOTAL_REL_INC.png", replace
+											
+********************************************************************************								
+			*Figure A.8. Model 1C: Predicted probabilities of transition to 1st child over years from fiscal marriage and income tertiles (interaction)
+					
+					*MARRIED
+
+						*Women
+						logistic child1_tv2 i.l2q3rincome_as##i.timing5 i.age5 i.year_groups i.l2q3rincome_partner_as##i.timing5 i.h_l_nasc_c_head i.h_l_nasc_c_partner ///
+							i.l2modello_ i.l2modello_partner if sesso_id_des==1
+							
+							margins i.l2q3rincome_as, at(timing5=(0 1 2 3 4 5 6 7 8 9 10)) post coefleg
+									estimate store women_timing_margins
+							marginsplot, ///
+									recast(scatter) ///
+									ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+									ytitle("") ///						
+									ylabel(0(.05).25) ///
+									xtitle ("Years from Fiscal Marriage") ///
+									yline(0, lcolor(reddish) lpattern(dash)) ///
+									xlabel(, angle(45)) ///
+									title("Women") ///
+									plotopts(msize(large)) ///						
+									legend(position(6) col(3) region(lcolor(black)))
+								graph save "NAIVE_LOGIT_WOMEN_INT_TIMING_Q3.gph", replace
+								graph export "NAIVE_LOGIT_WOMEN_INT_TIMING_Q3.png", replace
+											
+						*Men
+						logistic child1_tv2 i.l2q3rincome_as##i.timing5 i.age5 i.year_groups i.l2q3rincome_partner_as##i.timing5 i.h_l_nasc_c_head i.h_l_nasc_c_partner  ///
+							i.l2modello_ i.l2modello_partner if sesso_id_des==2
+							
+							margins i.l2q3rincome_as, at(timing5=(0 1 2 3 4 5 6 7 8 9 10)) post coefleg
+									estimate store men_timing_margins
+							marginsplot, ///
+									recast(scatter) ///
+									ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+									ytitle("") ///						
+									ylabel(0(.05).25) ///
+									xtitle ("Years from Fiscal Marriage") ///
+									yline(0, lcolor(reddish) lpattern(dash)) ///						
+									xlabel(, angle(45)) ///
+									title("Men") ///
+									plotopts(msize(large)) ///						
+									legend(position(6) col(3) region(lcolor(black)))
+								graph save "NAIVE_LOGIT_MEN_INT_TIMING_Q3.gph", replace
+								graph export "NAIVE_LOGIT_MEN_INT_TIMING_Q3.png", replace
+							
+								grc1leg "NAIVE_LOGIT_MEN_INT_TIMING_Q3.gph" "NAIVE_LOGIT_WOMEN_INT_TIMING_Q3.gph", title("Married Couples", size(medium))
+									graph save "NAIVE_LOGIT_MEN_WOMEN_INT_TIMING_Q3.gph", replace
+									graph export "NAIVE_LOGIT_MEN_WOMEN_INT_TIMING_Q3.png", replace			
+									
+********************************************************************************								
+			*Figure A.9. Model 1D: Predicted probabilities of transition to 1st child by age and income tertiles (interaction)
+					
+					*MARRIED
+					
+						*Women
+						logistic child1_tv2 i.l2q3rincome_as##i.age5 i.year_groups i.l2q3rincome_partner_as##i.age5 i.h_l_nasc_c_head i.h_l_nasc_c_partner partner_timing0 ///
+							i.l2modello_ i.l2modello_partner if sesso_id_des==1
+							
+							margins i.l2q3rincome_as, at(age5=(1 2 3 4 5 6)) post coefleg
+									estimate store women_age_margins
+							marginsplot, ///
+									recast(scatter) ///
+									ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+									ytitle("") ///						
+									ylabel(0(.05).3) ///
+									xtitle ("Women's Age at Fiscal Marriage") ///
+									yline(0, lcolor(reddish) lpattern(dash)) ///
+									xlabel(, angle(45)) ///
+									title("Women") ///
+									plotopts(msize(large)) ///						
+									legend(position(6) col(3) region(lcolor(black)))
+								graph save "NAIVE_LOGIT_WOMEN_INT_AGE_Q3.gph", replace
+								graph export "NAIVE_LOGIT_WOMEN_INT_AGE_Q3.png", replace
+											
+						*Men
+						logistic child1_tv2 i.l2q3rincome_as##i.age5 i.year_groups i.l2q3rincome_partner_as##i.age5 i.h_l_nasc_c_head i.h_l_nasc_c_partner partner_timing0 ///
+							i.l2modello_ i.l2modello_partner if sesso_id_des==2
+							
+							margins i.l2q3rincome_as, at(age5=(1 2 3 4 5 6)) post coefleg
+									estimate store men_age_margins
+							marginsplot, ///
+									recast(scatter) ///
+									ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+									ytitle("") ///						
+									ylabel(0(.05).3) ///
+									xtitle("Women's Age at Fiscal Marriage'") ///
+									yline(0, lcolor(reddish) lpattern(dash)) ///						
+									xlabel(, angle(45)) ///
+									title("Men") ///
+									plotopts(msize(large)) ///						
+									legend(position(6) col(3) region(lcolor(black)))
+								graph save "NAIVE_LOGIT_MEN_INT_AGE_Q3.gph", replace
+								graph export "NAIVE_LOGIT_MEN_INT_AGE_Q3.png", replace
+							
+							grc1leg "NAIVE_LOGIT_MEN_INT_AGE_Q3.gph" "NAIVE_LOGIT_WOMEN_INT_AGE_Q3.gph", title("Married Couples", size(medium))
+								graph save "NAIVE_LOGIT_MEN_WOMEN_INT_AGE_Q3.gph", replace
+								graph export "NAIVE_LOGIT_MEN_WOMEN_INT_AGE_Q3.png", replace
+								
+				*SINGLE
+					use "single.dta", clear
+								
+						logistic child1_tv2 i.l2q3rincome_as##i.age5_women i.year_groups i.l_nasc_c i.l2modello_ if sesso_id_des==1
+					
+							margins i.l2q3rincome_as, at(age5_women=(1 2 3 4 5 6)) post coefleg
+									estimate store women_age_margins
+							marginsplot, ///
+									recast(scatter) ///
+									ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+									ytitle("") ///						
+									ylabel(0(.01).05) ///
+									xtitle ("Women Age") ///
+									yline(0, lcolor(reddish) lpattern(dash)) ///
+									xlabel(, angle(45)) ///
+									title("Women") ///
+									plotopts(msize(large)) ///						
+									legend(position(6) col(3) region(lcolor(black)))
+								graph save "SINGLE_LOGIT_WOMEN_INT_AGE_Q3.gph", replace
+								graph export "SINGLE_LOGIT_WOMEN_INT_AGE_Q3.png", replace
+									
+						logistic child1_tv2 i.l2q3rincome_as##i.age5_men i.year_groups i.l_nasc_c i.l2modello_ if sesso_id_des==2
+							
+							margins i.l2q3rincome_as, at(age5_men=(1 2 3 4 5 6 7)) post coefleg
+									estimate store men_age_margins
+							marginsplot, ///
+									recast(scatter) ///
+									ciopts(recast(rarea) fcolor(blue%20 reddish%20) fintensity(20) lwidth(none)) ///
+									ytitle("") ///						
+									ylabel(0(.01).05) ///
+									xtitle("Men Age") ///
+									yline(0, lcolor(reddish) lpattern(dash)) ///						
+									xlabel(, angle(45)) ///
+									title("Men") ///
+									plotopts(msize(large)) ///						
+									legend(position(6) col(3) region(lcolor(black)))
+								graph save "SINGLE_LOGIT_MEN_INT_AGE_Q3.gph", replace
+								graph export "SINGLE_LOGIT_MEN_INT_AGE_Q3.png", replace
+							
+							grc1leg "SINGLE_LOGIT_MEN_INT_AGE_Q3.gph" "SINGLE_LOGIT_WOMEN_INT_AGE_Q3.gph", title("Single/Cohabitors", size(medium))
+								graph save "SINGLE_LOGIT_MEN_WOMEN_INT_AGE_Q3.gph", replace
+								graph export "SINGLE_LOGIT_MEN_WOMEN_INT_AGE_Q3.png", replace
+
+********************************************************************************								
+			*Figure A.10. Model 1E: Predicted probabilities of transition to 1st child over year-specific total individual income quintiles (t-2 lag) by sex in Italy and Italian Central Regions (Tuscany, Umbria, Marche, Lazio): EU-SILC data (code available upon request)
+********************************************************************************
+
+			log close
