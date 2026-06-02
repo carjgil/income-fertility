@@ -12,7 +12,7 @@
 
 Here you can find the replication dofile in STATA format and the codebook of the ESR article "Positive Effects of His and Her Income on First Births: Couple-Level Evidence from Longitudinal Tax Data in Italy":
 
-1. "analysis.do" reproduces all the tables and figures presented in the article and online appendix.
+1. "replication code.do" reproduces all the tables and figures presented in the article and online appendix.
 2. "codebook.xls" documents the name, labels and categories of all the variables.
 3. "logfile.log" log file with all the analyses and models' full output.
 
