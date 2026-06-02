@@ -14,6 +14,7 @@ Here you can find the replication dofile in STATA format and the codebook of the
 
 1. "analysis.do" reproduces all the tables and figures presented in the article and online appendix.
 2. "codebook.xls" documents the name, labels and categories of all the variables.
+3. "logfile.log" log file with all the analyses and models' full output.
 
 Data Availability and Transparency Statement
 
